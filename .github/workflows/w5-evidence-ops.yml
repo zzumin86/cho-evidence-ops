@@ -6,7 +6,7 @@ on:
       mode:
         type: choice
         required: true
-        options: [env-guard, reachability, permission-gates, publish, issuer-probe-db, issuer-dry-run, issuer-issue]
+        options: [env-guard, reachability, permission-gates, publish, publish-manifest, issuer-probe-db, issuer-dry-run, issuer-issue]
       expected_code_sha:
         description: 이 공개 ops 저장소 main의 승인된 40자 SHA
         required: true
@@ -55,7 +55,7 @@ jobs:
           python - <<'PY'
           import os, re
           from pathlib import Path
-          modes = {'env-guard', 'reachability', 'permission-gates', 'publish', 'issuer-probe-db', 'issuer-dry-run', 'issuer-issue'}
+          modes = {'env-guard', 'reachability', 'permission-gates', 'publish', 'publish-manifest', 'issuer-probe-db', 'issuer-dry-run', 'issuer-issue'}
           ok = (os.environ['GITHUB_EVENT_NAME'] == 'workflow_dispatch' and
                 os.environ['GITHUB_REF'] == 'refs/heads/main' and
                 re.fullmatch('[a-f0-9]{40}', os.environ['EXPECTED_SHA']) and
@@ -73,7 +73,7 @@ jobs:
           PY
   publisher:
     needs: validate
-    if: github.ref == 'refs/heads/main' && contains(fromJSON('["env-guard","reachability","permission-gates","publish"]'), inputs.mode)
+    if: github.ref == 'refs/heads/main' && contains(fromJSON('["env-guard","reachability","permission-gates","publish","publish-manifest"]'), inputs.mode)
     environment: w5-evidence-publisher
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -136,7 +136,7 @@ jobs:
           args = ['--mode', os.environ['MODE'], '--actions-sha', os.environ['OPS_SHA'],
                   '--manifest-reference', os.environ['MANIFEST_REF'], '--expected-manifest-hash', os.environ['MANIFEST_HASH'],
                   '--expected-code-sha', os.environ['RUNTIME_SHA'], '--kind', os.environ['EVIDENCE_KIND']]
-          if os.environ['MODE'] == 'publish':
+          if os.environ['MODE'] in ('publish', 'publish-manifest'):
               args.append('--publish')
           raise SystemExit(main(args))
           PY

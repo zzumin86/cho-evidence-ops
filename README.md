@@ -40,3 +40,10 @@ publish/issuer 모드의 manifest는 비공개 evidence Storage에 사전 준비
 원문 reference/sha256은 private tool의 반환 receipt와 새 `originals/<UUID>.json` 객체로 확인합니다. Actions 공개 stdout/summary에는 상태·검사ID·건수·hash만 출력하며 reference/path·원문·manifest·행·예외 상세는 출력하지 않습니다. 공개 artifact 업로드도 없습니다. 원문 위치를 공개 로그에서 복구하려 하지 말고 승인된 private Storage에서 해당 bytes/hash를 확인합니다.
 
 publisher DB snapshot과 Storage listing은 원격 원자 snapshot이 아닙니다. 원문 진실성·권한 G1~G6·credential custody·E5·EXIT/overlap·Storage 용량·소규모 실행/P2는 별도 gate이며, 이 workflow 코드 준비만으로 종결하지 않습니다. 오류/응답분실 때 같은 경로를 덮거나 자동 재발급하지 않습니다. publisher 업로드 후 readback 실패는 commit unknown으로 취급해 private Storage에서 확인합니다.
+# CP625 publish-manifest 준비
+
+`publish-manifest`는 publisher Environment 전용 mode다. `manifest_reference`와 `expected_manifest_hash`는 이 mode에서 private evidence 버킷의 canonical **준비 요청 JSON** reference/hash를 의미한다. 실제 runtime health identity·종목·일자·caps·시간창·bootstrap 원문 ref/hash를 담은 요청을 승인된 비공개 경로로 먼저 준비한다. 민감한 입력이나 manifest 본문을 이 public repo/dispatch 텍스트에 붙이지 않는다.
+
+runner는 승인 backend SHA의 `tools.w5_execution_manifest`를 호출하고, bootstrap 원문의 실제 hash/origin/identity/watermark를 대조해 EXECUTION 또는 BOOTSTRAP EVIDENCE 후보를 `manifests/<uuid>.json`에 create-only 업로드·readback한다. 공개 출력은 hash 등 기존 allowlist뿐이다. 객체 reference는 private Storage에서 hash로 확인한다. issuer DSN은 이 job에 전달하지 않는다.
+
+업로드는 발급이 아니다. 별도 HQ 검토 후 기존 issuer dry-run/probe/issue 순서를 따른다. 전체 영업일 원천·실제 health identity·bootstrap 독립 증거·유니버스/예산 승인 미확보 시 발급/연구 HOLD다. 이 코드 PR에서는 dispatch·업로드·발급·연구·Render 변경을 실행하지 않는다. 정확한 private 입력 계약은 backend의 `docs/w5-shared-collector-manual-dispatch.md` 9절에 있다.
