@@ -1,4 +1,4 @@
-name: W5 evidence ops (수동 승인 전용)
+name: W5 evidence ops (HQ 수동 dispatch)
 
 on:
   workflow_dispatch:
@@ -6,10 +6,13 @@ on:
       mode:
         type: choice
         required: true
-        options: [env-guard, reachability, permission-gates, publish, publish-manifest, issuer-probe-db, issuer-dry-run, issuer-issue]
+        options: [env-guard, reachability, permission-gates, publish, publish-manifest, prepare-wave, issuer-probe-db, issuer-dry-run, issuer-issue]
       expected_code_sha:
         description: 이 공개 ops 저장소 main의 승인된 40자 SHA
         required: true
+        type: string
+      plan_id:
+        description: 승인된 private backend 계획 ID (본문·종목 입력 금지)
         type: string
       manifest_reference:
         description: 비공개 evidence Storage의 manifest reference (원문 입력 금지)
@@ -55,7 +58,7 @@ jobs:
           python - <<'PY'
           import os, re
           from pathlib import Path
-          modes = {'env-guard', 'reachability', 'permission-gates', 'publish', 'publish-manifest', 'issuer-probe-db', 'issuer-dry-run', 'issuer-issue'}
+          modes = {'env-guard', 'reachability', 'permission-gates', 'publish', 'publish-manifest', 'prepare-wave', 'issuer-probe-db', 'issuer-dry-run', 'issuer-issue'}
           ok = (os.environ['GITHUB_EVENT_NAME'] == 'workflow_dispatch' and
                 os.environ['GITHUB_REF'] == 'refs/heads/main' and
                 re.fullmatch('[a-f0-9]{40}', os.environ['EXPECTED_SHA']) and
@@ -73,7 +76,7 @@ jobs:
           PY
   publisher:
     needs: validate
-    if: github.ref == 'refs/heads/main' && contains(fromJSON('["env-guard","reachability","permission-gates","publish","publish-manifest"]'), inputs.mode)
+    if: github.ref == 'refs/heads/main' && contains(fromJSON('["env-guard","reachability","permission-gates","publish","publish-manifest","prepare-wave"]'), inputs.mode)
     environment: w5-evidence-publisher
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -116,6 +119,7 @@ jobs:
           MANIFEST_REF: ${{ inputs.manifest_reference }}
           MANIFEST_HASH: ${{ inputs.expected_manifest_hash }}
           EVIDENCE_KIND: ${{ inputs.evidence_kind }}
+          PLAN_ID: ${{ inputs.plan_id }}
           CHO_APPROVED_BACKEND_SHA_FILE: ../ops/approved/backend_sha
           CHO_CHECKED_BACKEND_SHA: ${{ needs.validate.outputs.backend_sha }}
           CHO_RAW_PROJECT: ${{ vars.CHO_RAW_PROJECT }}
@@ -136,7 +140,10 @@ jobs:
           args = ['--mode', os.environ['MODE'], '--actions-sha', os.environ['OPS_SHA'],
                   '--manifest-reference', os.environ['MANIFEST_REF'], '--expected-manifest-hash', os.environ['MANIFEST_HASH'],
                   '--expected-code-sha', os.environ['RUNTIME_SHA'], '--kind', os.environ['EVIDENCE_KIND']]
-          if os.environ['MODE'] in ('publish', 'publish-manifest'):
+          if os.environ['MODE'] == 'prepare-wave':
+              args = ['--mode', 'prepare-wave', '--actions-sha', os.environ['OPS_SHA'],
+                      '--plan-id', os.environ['PLAN_ID']]
+          if os.environ['MODE'] in ('publish', 'publish-manifest', 'prepare-wave'):
               args.append('--publish')
           raise SystemExit(main(args))
           PY
